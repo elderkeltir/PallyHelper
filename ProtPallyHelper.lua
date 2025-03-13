@@ -19,6 +19,14 @@ local spellDurationsProt = {
     ["Consecration"] = 9
 }
 
+local spellBindProt = { 
+    ["Shield of Righteousness"] = "4", 
+    ["Holy Shield"] = "3", 
+    ["Hammer of the Righteous"] = "1", 
+    ["Judgement of Wisdom"] = "E", 
+    ["Consecration"] = "2"
+}
+
 local spellsRet = {
     ["Judgement of Wisdom"] = 1,
     ["Hammer of Wrath"] = 2,
@@ -26,6 +34,15 @@ local spellsRet = {
     ["Divine Storm"] = 4,
     ["Consecration"] = 5,
     ["Exorcism "] = 6
+}
+
+local spellBindRet = {
+    ["Judgement of Wisdom"] = "E",
+    ["Hammer of Wrath"] = "4",
+    ["Crusader Strike"] = "1",
+    ["Divine Storm"] = "3",
+    ["Consecration"] = "2",
+    ["Exorcism "] = "R"
 }
 
 local is6secNext = true;
@@ -37,6 +54,11 @@ spellIcon:SetSize(50, 50)
 spellIcon.texture = spellIcon:CreateTexture(nil, "ARTWORK")
 spellIcon.texture:SetAllPoints()
 spellIcon:SetPoint("LEFT", frame, "LEFT", 0, 0)
+
+spellIcon.text = spellIcon:CreateFontString(nil, "OVERLAY")
+spellIcon.text:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE") -- Ensure valid font
+spellIcon.text:SetPoint("BOTTOMRIGHT", spellIcon, "BOTTOMRIGHT", -2, 2) -- Position in bottom-right
+spellIcon.text:SetText("") -- Example keybind
 
 local function IsProtectionSpec()
     local name, _, pointsSpent = GetTalentTabInfo(2) -- Protection is the 2nd tree
@@ -121,6 +143,89 @@ local function GetBestAvailableSpell()
     return bestSpell  -- Returns nil if no spell meets the criteria
 end
 
+local function GetBind(spellname)
+    print("Spec " .. GetSpec() .. "spellname " .. spellname)
+    if GetSpec() == "Prot" then
+        print("res " .. spellBindProt[spellname])
+        return spellBindProt[spellname]
+
+    elseif GetSpec() == "Ret" then
+        print("res " .. spellBindRet[spellname])
+        return spellBindRet[spellname]
+    else
+        return "T"
+    end
+end
+
+-- function FindActionForSpell(spellName)
+--     for slot = 1, 120 do
+--         local texture = GetActionTexture(slot)
+--         if texture then
+--             local spellTexture = GetSpellTexture(spellName)  -- Get spell icon texture
+--             if spellTexture and texture == spellTexture then
+--                 print(slot)
+--                 return slot -- Found matching spell on action bar
+--             end
+--         end
+--     end
+--     return nil
+-- end
+
+
+-- function GetKeybindForSpell(spellName)
+--     local actionSlot = FindActionForSpell(spellName)
+--     if actionSlot then
+--         local keys = { GetBindingKey("ACTIONBUTTON" .. actionSlot) } -- Always a table
+--         if #keys > 0 then
+--             return table.concat(keys, ", ") -- Join keys if multiple bindings exist
+--         end
+--     end
+--     return "Unbound"
+-- end
+
+-- function GetKeybindForSpell(spellName)
+--     local actionSlot = FindActionForSpell(spellName)
+--     if not actionSlot then
+--         return "Unbound"
+--     end
+
+--     local keys = {}
+
+--     -- Try Blizzard default bars
+--     local blizzardBindings = {
+--         [1] = "ACTIONBUTTON",  -- Main bar
+--         [13] = "MULTIACTIONBAR1BUTTON",  -- Right bar 1
+--         [25] = "MULTIACTIONBAR2BUTTON",  -- Right bar 2
+--         [37] = "MULTIACTIONBAR3BUTTON",  -- Bottom left
+--         [49] = "MULTIACTIONBAR4BUTTON",  -- Bottom right
+--     }
+
+--     for startSlot, bindingPrefix in pairs(blizzardBindings) do
+--         if actionSlot >= startSlot and actionSlot < startSlot + 12 then
+--             local buttonIndex = actionSlot - startSlot + 1
+--             local bindingKey = GetBindingKey(bindingPrefix .. buttonIndex)
+--             if bindingKey then
+--                 table.insert(keys, bindingKey)
+--             end
+--         end
+--     end
+
+--     -- Try Bartender
+--     local bt4binding = GetBindingKey("BT4Button" .. actionSlot)
+--     if bt4binding then
+--         table.insert(keys, bt4binding)
+--     end
+
+--     -- Return keybinds as a string
+--     if #keys > 0 then
+--         return table.concat(keys, ", ")
+--     end
+
+--     return "Unbound"
+-- end
+
+
+
 local function UpdateIcons()
     if not UnitAffectingCombat("player") then
         frame:Hide()
@@ -138,6 +243,14 @@ local function UpdateIcons()
 
     -- Ensure that the leftmost icon always shows the next spell to cast
     if available then
+        -- -- local spellName = "Shield of Righteousness"  -- Example spell
+        -- local spellName = available.spell
+
+        -- local keybind = GetKeybindForSpell(spellName)
+        -- print("Keybind for " .. spellName .. ": " .. keybind)
+
+       spellIcon.text:SetText(GetBind(available.spell)) -- Example keybind
+
         local texture = GetSpellTexture(available.spell)
         spellIcon.texture:SetTexture(texture)
 
