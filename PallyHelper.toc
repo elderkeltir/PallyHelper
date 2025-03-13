@@ -1,6 +1,6 @@
 ## Interface: 30400
-## Title: Prot Pally Helper
+## Title: Pally Helper
 ## Version: 1.0
 ## Author: You
-ProtPallyHelper.lua
+PallyHelper.lua
 

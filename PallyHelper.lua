@@ -1,7 +1,19 @@
-local frame = CreateFrame("Frame", "ProtPallyHelper", UIParent)
-frame:SetSize(150, 50)
-frame:SetPoint("CENTER", UIParent, "CENTER", 50, -120) -- 15px lower
-frame:Hide()
+
+local function IsEnabled()
+    local playerClass, _ = UnitClass("player")
+    local playerLevel = UnitLevel("player")
+
+    return (playerClass == "Paladin" and playerLevel == 80)
+end
+
+local frame = nil
+if IsEnabled() then
+    frame = CreateFrame("Frame", "PallyHelper", UIParent)
+    frame:SetSize(150, 50)
+    frame:SetPoint("CENTER", UIParent, "CENTER", 50, -120) -- 15px lower
+    frame:Hide()
+end
+
 
 local spellsProt = {
     ["Shield of Righteousness"] = 1,
@@ -48,17 +60,19 @@ local spellBindRet = {
 local is6secNext = true;
 
 -- Create 1 icon
+local spellIcon = nil
+if IsEnabled() then
+    spellIcon = CreateFrame("Frame", nil, frame)
+    spellIcon:SetSize(50, 50)
+    spellIcon.texture = spellIcon:CreateTexture(nil, "ARTWORK")
+    spellIcon.texture:SetAllPoints()
+    spellIcon:SetPoint("LEFT", frame, "LEFT", 0, 0)
 
-local spellIcon = CreateFrame("Frame", nil, frame)
-spellIcon:SetSize(50, 50)
-spellIcon.texture = spellIcon:CreateTexture(nil, "ARTWORK")
-spellIcon.texture:SetAllPoints()
-spellIcon:SetPoint("LEFT", frame, "LEFT", 0, 0)
-
-spellIcon.text = spellIcon:CreateFontString(nil, "OVERLAY")
-spellIcon.text:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE") -- Ensure valid font
-spellIcon.text:SetPoint("BOTTOMRIGHT", spellIcon, "BOTTOMRIGHT", -2, 2) -- Position in bottom-right
-spellIcon.text:SetText("") -- Example keybind
+    spellIcon.text = spellIcon:CreateFontString(nil, "OVERLAY")
+    spellIcon.text:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE") -- Ensure valid font
+    spellIcon.text:SetPoint("BOTTOMRIGHT", spellIcon, "BOTTOMRIGHT", -2, 2) -- Position in bottom-right
+    spellIcon.text:SetText("") -- Example keybind
+end
 
 local function IsProtectionSpec()
     local name, _, pointsSpent = GetTalentTabInfo(2) -- Protection is the 2nd tree
@@ -144,13 +158,13 @@ local function GetBestAvailableSpell()
 end
 
 local function GetBind(spellname)
-    print("Spec " .. GetSpec() .. "spellname " .. spellname)
+    -- print("Spec " .. GetSpec() .. "spellname " .. spellname)
     if GetSpec() == "Prot" then
-        print("res " .. spellBindProt[spellname])
+        -- print("res " .. spellBindProt[spellname])
         return spellBindProt[spellname]
 
     elseif GetSpec() == "Ret" then
-        print("res " .. spellBindRet[spellname])
+        -- print("res " .. spellBindRet[spellname])
         return spellBindRet[spellname]
     else
         return "T"
@@ -285,39 +299,41 @@ local function PeriodicUpdate()
 end
 
 -- Event handling
-local eventFrame = CreateFrame("Frame")
-eventFrame:RegisterEvent("ADDON_LOADED")
-eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED") -- Leaving combat
-eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED") -- Entering combat
-eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED") 
-eventFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN") -- Spell cooldowns update
+if IsEnabled() then
+    local eventFrame = CreateFrame("Frame")
+    eventFrame:RegisterEvent("ADDON_LOADED")
+    eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED") -- Leaving combat
+    eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED") -- Entering combat
+    eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED") 
+    eventFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN") -- Spell cooldowns update
 
-eventFrame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3, arg4)
-    if event == "ADDON_LOADED" and arg1 == "ProtPallyHelper" then
-        print("ProtPallyHelper Loaded!") -- Debug print
-    elseif event == "PLAYER_REGEN_ENABLED" then
-        frame:Hide()
-    elseif event == "PLAYER_REGEN_DISABLED" then
-        UpdateIcons()
-        frame:SetScript("OnUpdate", function(self, elapsed)
-            PeriodicUpdate()
-        end)
-    -- elseif event == "PLAYER_TALENT_UPDATE" then
-    --     UpdateIcons()
-    elseif event == "SPELL_UPDATE_COOLDOWN" then
-        -- Update icons and rotation when cooldown changes
-        UpdateIcons()
-    elseif event == "UNIT_SPELLCAST_SUCCEEDED" and arg1 == "player" and IsProtectionSpec() then
-        local spellName = GetSpellInfo(arg2)
-        if spellsProt[spellName] then
-            local duration = spellDurationsProt[spellName]
-            if duration == 6 then
-                is6secNext = false
-            elseif duration == 9 then
-                is6secNext = true
+    eventFrame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3, arg4)
+        if event == "ADDON_LOADED" and arg1 == "PallyHelper" then
+            print("PallyHelper Loaded!") -- Debug print
+        elseif event == "PLAYER_REGEN_ENABLED" then
+            frame:Hide()
+        elseif event == "PLAYER_REGEN_DISABLED" then
+            UpdateIcons()
+            frame:SetScript("OnUpdate", function(self, elapsed)
+                PeriodicUpdate()
+            end)
+        -- elseif event == "PLAYER_TALENT_UPDATE" then
+        --     UpdateIcons()
+        elseif event == "SPELL_UPDATE_COOLDOWN" then
+            -- Update icons and rotation when cooldown changes
+            UpdateIcons()
+        elseif event == "UNIT_SPELLCAST_SUCCEEDED" and arg1 == "player" and IsProtectionSpec() then
+            local spellName = GetSpellInfo(arg2)
+            if spellsProt[spellName] then
+                local duration = spellDurationsProt[spellName]
+                if duration == 6 then
+                    is6secNext = false
+                elseif duration == 9 then
+                    is6secNext = true
+                end
+                -- print(string.format("Cast: %s, Duration: %d sec, Next: %s", spellName, duration, is6secNext and "9-sec spell" or "6-sec spell"))
             end
-            -- print(string.format("Cast: %s, Duration: %d sec, Next: %s", spellName, duration, is6secNext and "9-sec spell" or "6-sec spell"))
         end
-    end
-end)
+    end)
 
+end
