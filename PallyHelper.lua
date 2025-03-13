@@ -59,6 +59,16 @@ local spellBindRet = {
 
 local is6secNext = true;
 
+local function GetGCDRemnaining()
+    local start, duration = GetSpellCooldown("Purify")  -- Use any spell that triggers GCD
+    local gcdRemaining = 0
+    
+    if duration > 0 then
+        gcdRemaining = start + duration - GetTime()
+    end
+    return gcdRemaining + 0.05
+end
+
 -- Create 1 icon
 local spellIcon = nil
 if IsEnabled() then
@@ -95,16 +105,29 @@ local function GetSpec()
 end
 
 function hasArtOfWar()
+    local spellName = "The Art of War"
+
     for i = 1, 40 do
-        local name = UnitBuff("player", i)
+        local name, _, _, _, _, duration, expirationTime = UnitBuff("player", i)
         if not name then break end
-        if name == "The Art of War" then
-            return true
+
+        if name == spellName then
+            -- Get buff remaining time
+            local buffRemaining = expirationTime - GetTime()
+
+            -- Get Exorcism cooldown
+            local start, duration = GetSpellCooldown("Exorcism")
+            local exorcismCD = (duration > 0) and (start + duration - GetTime()) or 0
+
+            -- print("exorcismCD: " .. exorcismCD .. ", buffRemaining=" .. buffRemaining)
+
+            -- Check if buff lasts long enough
+            return buffRemaining > (exorcismCD + 0.1)
         end
     end
+
     return false
 end
-
 
 local function GetBestAvailableSpell()
     local bestSpell = nil
@@ -115,7 +138,7 @@ local function GetBestAvailableSpell()
             local start, duration = GetSpellCooldown(spell)
             local remainingCD = (start + duration - GetTime())
             
-            if remainingCD < 1.5 and priority < bestPrio and ((is6secNext and spellDurationsProt[spell] == 6) or (not is6secNext and spellDurationsProt[spell] == 9)) then
+            if remainingCD < GetGCDRemnaining() and priority < bestPrio and ((is6secNext and spellDurationsProt[spell] == 6) or (not is6secNext and spellDurationsProt[spell] == 9)) then
                 bestSpell = { spell = spell, start = start, duration = duration, priority = priority }
                 bestPrio = priority
                 -- print(string.format(">>> New Best Spell: %s (Priority: %d)", spell, priority))
@@ -135,7 +158,7 @@ local function GetBestAvailableSpell()
             local remainingCD = (start + duration - GetTime())
             local insta_exorcism = hasArtOfWar()
 
-            if remainingCD < 1.5 and priority2 < bestPrio then
+            if remainingCD < GetGCDRemnaining() and priority2 < bestPrio then
 
                 if spell2 == "Hammer of Wrath" and target_hp < 20 then
                     bestSpell = { spell = spell2, start = start, duration = duration, priority = priority2 }
@@ -263,17 +286,18 @@ local function UpdateIcons()
         -- local keybind = GetKeybindForSpell(spellName)
         -- print("Keybind for " .. spellName .. ": " .. keybind)
 
-       spellIcon.text:SetText(GetBind(available.spell)) -- Example keybind
+        spellIcon.text:SetText(GetBind(available.spell)) -- Example keybind
 
         local texture = GetSpellTexture(available.spell)
-        spellIcon.texture:SetTexture(texture)
-
+        
         local inRange = IsSpellInRange(available.spell, "target") -- Check range
         local start, duration = GetSpellCooldown(available.spell) -- Check cooldown
         if start == nil then
             start, duration = GetSpellCooldown(48801) -- Check cooldown
+            texture = "Interface\\Icons\\Spell_Holy_Excorcism_02"
         end
         local isUsable, notEnoughMana = IsUsableSpell(available.spell) -- Check mana
+        spellIcon.texture:SetTexture(texture)
 
         -- Default color (fully available)
         spellIcon.texture:SetVertexColor(1, 1, 1, 1) 
@@ -288,6 +312,7 @@ local function UpdateIcons()
         end
     else
         spellIcon.texture:SetTexture(nil)
+        spellIcon.text:SetText("")
     end
 end
 
